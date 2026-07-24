@@ -12,12 +12,12 @@
 #include <driver/gpio.h>
 
 /*Variables globales*/
-int contadorDecenas = 0;
-int contadorBinarios = 0;
-int velocidecenas = 1000;
+int contadorDecenas = 1;
+int contadorBinarios = 1;
 int modo = 0;
 int estadoateriorsuma = 0;
 int estadoanteriorresta = 0;
+int estadoanteriormodo = 0;
 
 const int led1 = 12;
 const int led2 = 14;
@@ -25,7 +25,7 @@ const int led3 = 27;
 const int led4 = 26;
 
 const int botonsuma = 4;
-const int botonresta = 5;
+const int botonresta = 18;
 const int botonmodo = 22;
 
 /*Declaración de variables*/
@@ -41,37 +41,45 @@ void setup() {
 }
 
 /*Funciones adicionales*/
+
+//función unicamente para el contador de las decenas
 void mododec() {
   int essuma = digitalRead(botonsuma);
   int esresta = digitalRead(botonresta);
-  contadorDecenas = 1;
 
+//antirebote para los dos botones en el circuito
   delay(15);
-  if (essuma == HIGH){
+  if (essuma == LOW){
     estadoateriorsuma = 1;
   }
-  if (essuma == LOW && estadoateriorsuma == 1){
+  if (essuma == HIGH && estadoateriorsuma == 1){
     contadorDecenas++;
 
-    if (contadorDecenas >= 5){
-      contadorDecenas = 0;
+    if (contadorDecenas == 5){
+      contadorDecenas = 1;
     }
+    estadoateriorsuma = 0;
     delay(15);
+
   }
   
-  if (esresta == HIGH){
+  if (esresta == LOW){
     estadoanteriorresta = 1;
   }
-  if (esresta == LOW && estadoanteriorresta == 1){
-    contadorDecenas--;
+  if (esresta == HIGH && estadoanteriorresta == 1){
 
     if (contadorDecenas == 0){
       contadorDecenas = 4;
-
     }
+    else{
+      contadorDecenas--;
+    }
+    estadoanteriorresta = 0;
+
     delay(15);
   }
 
+//switch case con el contador de decenas
   switch (contadorDecenas){
   case 1:
     digitalWrite(led1, HIGH);
@@ -84,6 +92,7 @@ void mododec() {
     digitalWrite(led2, HIGH);
     digitalWrite(led3, LOW);
     digitalWrite(led4, LOW);
+    break;
   case 3:
     digitalWrite(led1, LOW);
     digitalWrite(led2, LOW);
@@ -100,37 +109,42 @@ void mododec() {
   
 }
 
+//función unicamente para el contador de binarios
 void modobin(){
   int essuma = digitalRead(botonsuma);
   int esresta = digitalRead(botonresta);
-  contadorBinarios = 0;
 
+//dos antirebote para los botones en el circuito
   delay(15);
-  if (essuma == HIGH){
+  if (essuma == LOW){
     estadoateriorsuma = 1;
   }
-  if (essuma == LOW && estadoateriorsuma == 1){
+  if (essuma == HIGH && estadoateriorsuma == 1){
     contadorBinarios++;
 
-    if (contadorBinarios > 16){
-      contadorBinarios = 0;
+    if (contadorBinarios == 17){
+      contadorBinarios = 1;
     }
+    estadoateriorsuma = 0;
     delay(15);
   }
   
-  if (esresta == HIGH){
+  if (esresta == LOW){
     estadoanteriorresta = 1;
   }
-  if (esresta == LOW && estadoanteriorresta == 1){
-    contadorBinarios--;
-
-    if (contadorBinarios < 0){
+  if (esresta == HIGH && estadoanteriorresta == 1){
+      
+    if (contadorBinarios == 0){
       contadorBinarios = 16;
     }
+    else{
+      contadorBinarios--;
+    }
+    estadoanteriorresta = 0;
     delay(15);
   }
   
-  
+  //switch case con todos los números entre el 0-15
   switch (contadorBinarios){
   case 1:
     digitalWrite(led1, LOW);
@@ -234,44 +248,31 @@ void modobin(){
 
 /*Función principal*/
 void loop() {
-  mododec();
-  int essuma = digitalRead(botonsuma);
-  int esresta = digitalRead(botonresta);
-  modo = 0;
-
+  int esmodo = digitalRead(botonmodo);
   delay(15);
-  if (essuma == HIGH){
-    estadoateriorsuma = 1;
+
+//anti rebote
+  if (esmodo == HIGH){
+    estadoanteriormodo = 1;
   }
-  if (essuma == LOW && estadoateriorsuma == 1){
+  if (esmodo == LOW && estadoanteriormodo == 1){
     modo++;
 
-    if (modo > 1){
+    if (modo == 2){
       modo = 0;
     }
+
+    estadoanteriormodo = 0;
     delay(15);
   }
   
-  if (esresta == HIGH){
-    estadoanteriorresta = 1;
-  }
-  if (esresta == LOW && estadoanteriorresta == 1){
-    modo--;
 
-    if (modo < 0){
-      modo = 1;
-    }
-    delay(15);
-  }
-
-
+//Esto es para el cambio sencillo entre ambos modos
  switch (modo) {
     case 0:
-      contadorDecenas = 1;
       mododec();
       break;
     case 1:
-      contadorBinarios = 1;
       modobin();
       break;
   }
