@@ -1,0 +1,348 @@
+/******************************
+*Universidad del Valle de Guatemala
+*Electronica analógica 1
+*Javier Alejandro Gómez Domínguez - 191095
+*Programa: Contador de decenas y binarios
+********************************/
+
+/*Librerias*/ 
+#include <Arduino.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <driver/gpio.h>
+#define alarma 25000
+
+
+
+/*Variables globales*/
+int contadorBinarios = 1;
+int contadorauto = 1;
+int estadoateriorsuma = 0;
+int estadoanteriorresta = 0;
+int estadoled = LOW;
+
+//estos primeros cuatro leds son para el contador binario
+const int led1 = 4;
+const int led2 = 18;
+const int led3 = 19;
+const int led4 = 21;
+
+//estos ultimos cuatro leds son para el contador automatico
+const int led5 = 13;
+
+const int led6 = 33;
+const int led7 = 25;
+const int led8 = 26;
+const int led9 = 27;
+
+const int botonsuma = 22;
+const int botonresta = 23;
+const int boton3 = 32;
+
+int comparador = LOW;
+
+hw_timer_t *Timer0_Cfg = NULL;
+
+void configTimer(void);
+void IRAM_ATTR Timer0_ISR();
+void IRAM_ATTR suma();
+void IRAM_ATTR resta();
+
+
+/*Declaración de variables*/
+void setup() {
+  pinMode(led1, OUTPUT);
+  pinMode(led2, OUTPUT);
+  pinMode(led3, OUTPUT);
+  pinMode(led4, OUTPUT);
+
+  pinMode(led5, OUTPUT);
+
+  pinMode(led6, OUTPUT);
+  pinMode(led7, OUTPUT);  
+  pinMode(led8, OUTPUT);
+  pinMode(led9, OUTPUT);
+
+  attachInterrupt(botonsuma, &suma, RISING);
+  attachInterrupt(botonresta, &resta, RISING);
+
+  configTimer();
+}
+
+
+/*Funciones adicionales*/
+
+//Apartado de timers y su configuración en el código
+void IRAM_ATTR Timer0_ISR(){
+  contadorauto++;
+  if (contadorauto > 16){
+    contadorauto = 1;
+  }
+}
+
+//estos son las dos interrupciones que se activan al presionar los botones de suma y resta, incrementando o restando el contador binario
+void IRAM_ATTR suma(){
+  contadorBinarios++;
+  if (contadorBinarios > 16){
+    contadorBinarios = 1;
+  }
+
+}
+
+void IRAM_ATTR resta(){
+  contadorBinarios--;
+  if (contadorBinarios < 1){
+    contadorBinarios = 16;
+  }
+
+}
+
+//es la función que reinicia el contador binario al presionar el cable tomado como botón
+void cablecito(){
+  if ((touchRead(boton3) < 30)){
+    contadorauto = 0;
+  }
+}
+
+void iguales(){
+  if (contadorBinarios == contadorauto){
+   
+    estadoled = !estadoled;
+    digitalWrite(led5, estadoled);
+    contadorauto = 0;
+   
+  /*}
+  else{
+    comparador = LOW;
+  }*/
+}
+}
+void configTimer(void){
+  Timer0_Cfg = timerBegin(0,800,true);
+
+  timerAttachInterrupt(Timer0_Cfg, &Timer0_ISR, true);
+
+  timerAlarmWrite(Timer0_Cfg, alarma, true);
+  timerAlarmEnable(Timer0_Cfg);
+
+}
+
+
+//Modo de contador binario operando con los botones de suma y resta
+void modobin(){
+  
+  switch (contadorBinarios){
+  case 1:
+    digitalWrite(led1, LOW);
+    digitalWrite(led2, LOW);
+    digitalWrite(led3, LOW);
+    digitalWrite(led4, LOW);
+    break;
+  case 2:
+    digitalWrite(led1, HIGH);
+    digitalWrite(led2, LOW);
+    digitalWrite(led3, LOW);
+    digitalWrite(led4, LOW);
+    break;
+  case 3:
+    digitalWrite(led1, LOW);
+    digitalWrite(led2, HIGH);
+    digitalWrite(led3, LOW);
+    digitalWrite(led4, LOW);
+    break;
+  case 4:
+    digitalWrite(led1, HIGH);
+    digitalWrite(led2, HIGH);
+    digitalWrite(led3, LOW);
+    digitalWrite(led4, LOW);
+    break;
+  case 5:
+    digitalWrite(led1, LOW);
+    digitalWrite(led2, LOW);
+    digitalWrite(led3, HIGH);
+    digitalWrite(led4, LOW);
+    break;
+  case 6:
+    digitalWrite(led1, HIGH);
+    digitalWrite(led2, LOW);
+    digitalWrite(led3, HIGH);
+    digitalWrite(led4, LOW);
+    break;
+  case 7:
+    digitalWrite(led1, LOW);
+    digitalWrite(led2, HIGH);
+    digitalWrite(led3, HIGH);
+    digitalWrite(led4, LOW);
+    break;
+  case 8:
+    digitalWrite(led1, HIGH);
+    digitalWrite(led2, HIGH);
+    digitalWrite(led3, HIGH);
+    digitalWrite(led4, LOW);
+    break;
+  case 9:
+    digitalWrite(led1, LOW);
+    digitalWrite(led2, LOW);
+    digitalWrite(led3, LOW);
+    digitalWrite(led4, HIGH);
+    break;
+  case 10:
+    digitalWrite(led1, HIGH);
+    digitalWrite(led2, LOW);
+    digitalWrite(led3, LOW);
+    digitalWrite(led4, HIGH);
+    break;
+  case 11:
+    digitalWrite(led1, LOW);
+    digitalWrite(led2, HIGH);
+    digitalWrite(led3, LOW);
+    digitalWrite(led4, HIGH);
+    break;
+  case 12:
+    digitalWrite(led1, HIGH);
+    digitalWrite(led2, HIGH);
+    digitalWrite(led3, LOW);
+    digitalWrite(led4, HIGH);
+    break;
+  case 13:
+    digitalWrite(led1, LOW);
+    digitalWrite(led2, LOW);
+    digitalWrite(led3, HIGH);
+    digitalWrite(led4, HIGH);
+    break;
+  case 14:
+    digitalWrite(led1, HIGH);
+    digitalWrite(led2, LOW);
+    digitalWrite(led3, HIGH);
+    digitalWrite(led4, HIGH);
+    break;
+  case 15:
+    digitalWrite(led1, LOW);
+    digitalWrite(led2, HIGH);
+    digitalWrite(led3, HIGH);
+    digitalWrite(led4, HIGH);
+    break;
+  case 16:
+    digitalWrite(led1, HIGH);
+    digitalWrite(led2, HIGH);
+    digitalWrite(led3, HIGH);
+    digitalWrite(led4, HIGH);
+    break;
+  }
+
+}
+
+//contador automatico con leds, incrementando cada 25 segundos, y reiniciando al llegar a 17
+void contau(){
+  
+  switch (contadorauto){
+  case 1:
+    digitalWrite(led6, LOW);
+    digitalWrite(led7, LOW);
+    digitalWrite(led8, LOW);
+    digitalWrite(led9, LOW);
+    break;
+  case 2:
+    digitalWrite(led6, HIGH);
+    digitalWrite(led7, LOW);
+    digitalWrite(led8, LOW);
+    digitalWrite(led9, LOW);
+    break;
+  case 3:
+    digitalWrite(led6, LOW);
+    digitalWrite(led7, HIGH);
+    digitalWrite(led8, LOW);
+    digitalWrite(led9, LOW);
+    break;
+  case 4:
+    digitalWrite(led6, HIGH);
+    digitalWrite(led7, HIGH);
+    digitalWrite(led8, LOW);
+    digitalWrite(led9, LOW);
+    break;
+  case 5:
+    digitalWrite(led6, LOW);
+    digitalWrite(led7, LOW);
+    digitalWrite(led8, HIGH);
+    digitalWrite(led9, LOW);
+    break;
+  case 6:
+    digitalWrite(led6, HIGH);
+    digitalWrite(led7, LOW);
+    digitalWrite(led8, HIGH);
+    digitalWrite(led9, LOW);
+    break;
+  case 7:
+    digitalWrite(led6, LOW);
+    digitalWrite(led7, HIGH);
+    digitalWrite(led8, HIGH);
+    digitalWrite(led9, LOW);
+    break;
+  case 8:
+    digitalWrite(led6, HIGH);
+    digitalWrite(led7, HIGH);
+    digitalWrite(led8, HIGH);
+    digitalWrite(led9, LOW);
+    break;
+  case 9:
+    digitalWrite(led6, LOW);
+    digitalWrite(led7, LOW);
+    digitalWrite(led8, LOW);
+    digitalWrite(led9, HIGH);
+    break;
+  case 10:
+    digitalWrite(led6, HIGH);
+    digitalWrite(led7, LOW);
+    digitalWrite(led8, LOW);
+    digitalWrite(led9, HIGH);
+    break;
+  case 11:
+    digitalWrite(led6, LOW);
+    digitalWrite(led7, HIGH);
+    digitalWrite(led8, LOW);
+    digitalWrite(led9, HIGH);
+    break;
+  case 12:
+    digitalWrite(led6, HIGH);
+    digitalWrite(led7, HIGH);
+    digitalWrite(led8, LOW);
+    digitalWrite(led9, HIGH);
+    break;
+  case 13:
+    digitalWrite(led6, LOW);
+    digitalWrite(led7, LOW);
+    digitalWrite(led8, HIGH);
+    digitalWrite(led9, HIGH);
+    break;
+  case 14:
+    digitalWrite(led6, HIGH);
+    digitalWrite(led7, LOW);
+    digitalWrite(led8, HIGH);
+    digitalWrite(led9, HIGH);
+    break;
+  case 15:
+    digitalWrite(led6, LOW);
+    digitalWrite(led7, HIGH);
+    digitalWrite(led8, HIGH);
+    digitalWrite(led9, LOW);
+    break;
+  case 16:
+    digitalWrite(led6, HIGH);
+    digitalWrite(led7, HIGH);
+    digitalWrite(led8, HIGH);
+    digitalWrite(led9, HIGH);
+    break;
+  }
+}
+
+
+/*Función principal*/
+void loop() {
+  modobin();
+  contau();
+  cablecito();
+  iguales();
+
+}
+
+
