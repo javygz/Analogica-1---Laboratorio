@@ -2,5 +2,222 @@
 *Universidad del Valle de Guatemala
 *Electronica analógica 1
 *Javier Alejandro Gómez Domínguez - 191095
-*Programa: Proyecto 1
+*Programa: Sistema de monitoreo para cadena de frío
 ********************************/
+
+/*Librerias*/ 
+#include <Arduino.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <driver/gpio.h>
+#include <driver/ledc.h>
+
+#define frecuenciaPWM 50
+#define resolutionPWM 10
+#define tiempo 500
+
+/*Variables globales*/
+
+//estos primeros siete leds son para el display de 7 segmentos
+const int segA = 13;
+const int segB = 12;
+const int segC = 14;
+const int segD = 27;
+const int segE = 26;
+const int segF = 25;
+const int segG = 33;
+const int segdP = 15;
+
+#define boton 4
+#define servo 2
+
+const int R = 5;
+const int G = 18;
+const int B = 19;
+
+const int dis1 = 21;
+const int dis2 = 23;
+const int dis3 = 22;
+
+const int sensor = 34;
+
+hw_timer_t*timer = NULL;
+
+int temp = 0;
+float temep = 0;
+float lectura = 0;
+
+//apartado de las interrupciones
+
+void temper(void);
+void di(void);
+void configTimer(void);
+void IRAM_ATTR rgb();
+void IRAM_ATTR TimerDisp(); 
+void IRAM_ATTR onButton_1();
+
+/*Declaración de variables*/
+
+void setup() {
+
+  Serial.begin(115200);
+  //estos son las salidas para cada uno de los segmentos
+  pinMode(segA, OUTPUT);
+  pinMode(segB, OUTPUT);
+  pinMode(segC, OUTPUT);
+  pinMode(segD, OUTPUT);
+  pinMode(segE, OUTPUT);
+  pinMode(segF, OUTPUT);
+  pinMode(segG, OUTPUT);
+  pinMode(segdP, OUTPUT);
+
+  //para los 3 displays de 7 segmentos (en mi caso solo es uno pero grande)
+  pinMode(dis1, OUTPUT);
+  pinMode(dis2, OUTPUT);
+  pinMode(dis3, OUTPUT);
+
+  pinMode(R, OUTPUT);
+  pinMode(G, OUTPUT);
+  pinMode(B, OUTPUT);
+
+  //para el servommotor
+
+  pinMode(servo, OUTPUT);
+
+  pinMode(sensor, INPUT);
+
+  //este es el boton que va a hacer las lecturas cada que se presione
+  attachInterrupt(boton, onButton_1, FALLING);
+  //initPWM();
+
+  configTimer();
+}
+
+/*Funciones adicionales*/
+void configTimer(void){
+
+  timer = timerBegin(0,800,true);
+  timerAttachInterrupt(timer, &TimerDisp, true);
+
+  timerAlarmWrite(timer, tiempo, true);
+  timerAlarmEnable(timer);
+
+}
+
+
+
+void temper(int temper){
+  
+  int segmentos[7] = {
+    segA, segB, segC,
+    segD, segE, segF, segG
+  };
+
+  int numeros[10][7] = {
+
+    {1,1,1,1,1,1,0},  // 0
+    {0,1,1,0,0,0,0},  // 1
+    {1,1,0,1,1,0,1},  // 2
+    {1,1,1,1,0,0,1},  // 3
+    {0,1,1,0,0,1,1},  // 4
+    {1,0,1,1,0,1,1},  // 5
+    {1,0,1,1,1,1,1},  // 6
+    {1,1,1,0,0,0,0},  // 7
+    {1,1,1,1,1,1,1},  // 8
+    {1,1,1,1,0,1,1}   // 9
+  };
+
+  for(int i = 0; i < 7; i++){
+
+    digitalWrite(segmentos[i], numeros[temper][i]);
+  }
+}
+
+
+
+void di(){
+
+  temep = (lectura * 3.3 / 4095) * 100;
+  int te = temep * 10;
+  int dec = te / 100;
+  int uni = (te / 10) % 10;
+  int decimal = te % 10;
+
+}
+
+void IRAM_ATTR TimerDisp(){
+  temp++;
+  if(temp > 2){
+    temp = 0;
+  }
+}
+
+
+void rgb(){
+
+  if(temep < 23){
+    digitalWrite(R, LOW);
+    digitalWrite(G, LOW);
+    digitalWrite(B, HIGH); //azul
+  }
+  else if((temep >= 23) && (temep < 25)){
+    digitalWrite(R, LOW);
+    digitalWrite(G, HIGH);
+    digitalWrite(B, LOW); // Verde
+  }
+  else if((temep >= 25) && (temep < 27)){
+    digitalWrite(R, HIGH);
+    digitalWrite(G, HIGH);
+    digitalWrite(B, LOW); // amarillo
+  }
+  else{
+    digitalWrite(R, HIGH);
+    digitalWrite(G, LOW);
+    digitalWrite(B, LOW); // Rojo
+  }
+
+  switch(temp){
+    case 0:
+      digitalWrite(dis1, HIGH);
+      digitalWrite(dis2, LOW);
+      digitalWrite(dis3, LOW);
+      digitalWrite(segdP, LOW);
+      delay(5);
+      break;
+    case 1:
+      digitalWrite(dis1, LOW);
+      digitalWrite(dis2, HIGH);
+      digitalWrite(dis3, LOW);
+      digitalWrite(segdP, HIGH);
+      delay(5);
+      break;
+    case 2:
+      digitalWrite(dis1, LOW);
+      digitalWrite(dis2, LOW);
+      digitalWrite(dis3, HIGH);
+      digitalWrite(segdP, LOW);
+      delay(5);
+      break;
+  }
+}
+
+void IRAM_ATTR onButton_1(){
+
+ Serial.print(temep);
+ lectura = analogRead(sensor);
+
+}
+
+
+void servorbg(){
+
+
+}
+
+/*Función principal*/
+void loop(){
+
+  di();
+  rgb();
+
+}
